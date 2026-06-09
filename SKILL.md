@@ -233,6 +233,17 @@ curl "https://openskill.md/api/stats"
 
 Response: `{ skills, blueprints, skillsets, totalDownloads }`.
 
+### MCP Servers
+
+The `osm mcp info` / `osm mcp setup` equivalents over HTTP:
+
+```bash
+curl "https://openskill.md/api/mcp-servers?search=postgres&limit=10"   # list & search
+curl "https://openskill.md/api/mcp-servers/{slug}"                     # server detail
+```
+
+To connect an MCP client directly, point it at the SSE endpoint `https://openskill.md/api/mcp/sse`.
+
 ### Manual install (no CLI)
 
 Download a skill's `SKILL.md` straight into your agent's skill directory so it stays discoverable:
