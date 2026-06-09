@@ -43,15 +43,17 @@ If `npm`/Node isn't available in this environment, use the **[HTTP API (fallback
 |---|---|
 | Search skills + blueprints by keyword | `osm search <query>` |
 | Full details for a skill or blueprint | `osm info <slug>` |
-| Install a skill (auto-placed for your agents) | `osm add <owner>/<repo>` — add `--json` for a machine-readable result |
+| Install a skill (auto-placed for your agents) | `osm add <slug>` or `osm add <owner>/<repo>` — add `--json` for a machine-readable result |
 | Install a specific skill from a multi-skill repo | `osm add <owner>/<repo>@<skill>` |
 | Browse collections interactively | `osm browse` |
 | MCP server details / config | `osm mcp info <slug>` · `osm mcp setup` |
 
-> `osm add` takes a source coordinate (`<owner>/<repo>` or `<owner>/<repo>@<skill>`),
-> **not** a catalog slug. When you only have a skill's catalog `slug` (e.g. from a
-> collection listing), resolve it first with `osm info <slug>` — it prints the
-> `github.com/<owner>/<repo>` repository — then `osm add <owner>/<repo>`.
+> CLI ≥ 0.3 resolves catalog slugs automatically: `osm add <slug>` looks the slug
+> up in the registry and installs exactly that skill from its source repo (the
+> `--json` result reports the substitution in `resolvedFrom`). Slugs that exist
+> only in the registry with no public source fail with an `osm info <slug>`
+> pointer. On CLI 0.2.x, resolve manually: `osm info <slug>` prints the
+> `github.com/<owner>/<repo>` repository, then `osm add <owner>/<repo>`.
 
 For **collections** and **registry stats** there's no non-interactive `osm`
 command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#http-api-fallback) for a scriptable list.
@@ -68,9 +70,10 @@ command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#ht
    ```bash
    osm info webapp-testing
    ```
-3. Install it (lands in your agent's skill directory automatically):
+3. Install it by slug (lands in your agent's skill directory automatically;
+   CLI ≥ 0.3 — on 0.2.x pass the `<owner>/<repo>` source from `osm info`):
    ```bash
-   osm add <owner>/<repo>
+   osm add webapp-testing
    ```
 4. Apply the skill's instructions to the current task.
 
@@ -85,16 +88,17 @@ command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#ht
    curl "https://openskill.md/api/collections/frontend"
    ```
    Each entry in the `skills` array carries `slug`, `githubOwner`, and `githubRepo`.
-3. Install each skill with its source coordinate:
+3. Install each skill by its catalog slug (CLI ≥ 0.3 resolves it and scopes the
+   install to that one skill, even in multi-skill repos):
    ```bash
-   osm add <githubOwner>/<githubRepo>
+   osm add <slug>
    ```
-   - If several skills in the collection share the same `<githubOwner>/<githubRepo>`
-     (a multi-skill repo), don't add the bare repo — it's ambiguous. Install the
-     specific skill with `osm add <githubOwner>/<githubRepo>@<skill>`, getting
-     `<skill>` from `osm info <slug>`.
-   - If a skill's `githubRepo` is `null`, resolve the coordinate with
-     `osm info <slug>` first.
+   - On CLI 0.2.x, use the source coordinate instead: `osm add
+     <githubOwner>/<githubRepo>`, disambiguating multi-skill repos with
+     `osm add <githubOwner>/<githubRepo>@<skill>` (get `<skill>` from
+     `osm info <slug>`).
+   - If a skill has no public source at all (registry-only), `osm add <slug>`
+     fails with an `osm info <slug>` pointer — inspect it there.
 
 ### When the agent needs structured output
 
