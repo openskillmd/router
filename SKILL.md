@@ -1,11 +1,11 @@
 ---
 name: openskill-router
-description: Discovers and installs AI agent skills, skill-sets, and blueprints from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, or structured output templates. One curl command to find everything.
+description: Discovers and installs AI agent skills, skill-sets, and blueprints from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, or structured output templates. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
 ---
 
 # OpenSkill Router
 
-The skill router for AI agents. Discover, search, and install curated skills, skill-sets, and blueprints from the OpenSkill registry.
+The skill router for AI agents. Discover, search, and install curated skills, skill-sets, and blueprints from the OpenSkill registry — using the `osm` CLI.
 
 **"I know Kung Fu."**
 
@@ -17,71 +17,38 @@ OpenSkill.md is the App Store for AI agent capabilities. It has three layers:
 2. **Skill-Sets** — Bundles of related skills grouped by domain (e.g. `@frontend`, `@backend`, `@ai-ml`)
 3. **Blueprints** — Self-correcting output specifications that guarantee structured results
 
-This router skill teaches your agent how to discover and use all three.
+This router skill teaches your agent how to discover and use all three through the `osm` CLI.
 
-## API Reference
+## Setup — install the osm CLI
 
-Base URL: `https://openskillmd.com`
-
-### Search Skills
+Discovery runs through the OpenSkill CLI. Ensure it's installed once (it's global):
 
 ```bash
-curl "https://openskillmd.com/api/skills?search=react&limit=10"
+npm i -g openskillmd
 ```
 
-Response: Array of skill objects with `name`, `slug`, `description`, `author`, `installCount`, `subcategory`, `ownerVerified`, `ownerAvatarUrl`.
+This exposes the `osm` command (aliases: `openskill`, `openskillmd`). Verify with `osm --version`.
 
-### Get Skill Detail
+> **Why the CLI and not raw downloads?** `osm add` resolves a skill, then writes it
+> into the agent skill directories your project actually uses (e.g.
+> `.claude/skills/<slug>/`), auto-detecting installed agents — so the skill is
+> discoverable immediately. A plain file download lands wherever you run it and
+> agents won't find it.
 
-```bash
-curl "https://openskillmd.com/api/skills/{slug}"
-```
+If `npm`/Node isn't available in this environment, use the **[HTTP API (fallback)](#http-api-fallback)** section below — every `osm` step has a `curl` equivalent.
 
-Response: Full skill object including `content` (the SKILL.md body), `sourceUrl`, `license`, `githubOwner`, `githubRepo`.
+## Discovery with osm
 
-### List Skill-Sets
+| What you need | Command |
+|---|---|
+| Search skills + blueprints by keyword | `osm search <query>` |
+| Full details for a skill or blueprint | `osm info <slug>` |
+| Install a skill (auto-placed for your agents) | `osm add <owner>/<repo>` — add `--json` for a machine-readable result |
+| Install a specific skill from a multi-skill repo | `osm add <owner>/<repo>@<skill>` |
+| MCP server details / config | `osm mcp info <slug>` · `osm mcp setup` |
 
-```bash
-curl "https://openskillmd.com/api/skillsets"
-```
-
-Response: Array of skill-set objects. Each has `name`, `slug`, `description`, `icon`, and a `skills` array of included skill summaries.
-
-Available skill-sets:
-- `@frontend` — React, Vue, CSS, design systems
-- `@backend` — APIs, databases, server patterns
-- `@fullstack` — End-to-end web development
-- `@mobile` — React Native, Expo, mobile UX
-- `@devops` — CI/CD, Docker, infrastructure
-- `@ai-ml` — Machine learning, LLMs, embeddings
-- `@security` — Auth, encryption, vulnerability scanning
-- `@design` — UI/UX, branding, accessibility
-- `@media` — Video, audio, image processing
-- `@productivity` — Automation, workflows, documentation
-
-### Search Blueprints
-
-```bash
-curl "https://openskillmd.com/api/blueprints?search=invoice&limit=10"
-```
-
-Response: Array of blueprint objects with `name`, `slug`, `description`, `category`, `difficulty`.
-
-### Get Blueprint Detail
-
-```bash
-curl "https://openskillmd.com/api/blueprints/{slug}"
-```
-
-Response: Full blueprint object including `content` (the structured output spec).
-
-### Registry Stats
-
-```bash
-curl "https://openskillmd.com/api/stats"
-```
-
-Response: `{ skills, blueprints, skillsets, totalDownloads }`.
+For **skill-sets** (domain bundles) and **registry stats** there's no non-interactive `osm`
+command yet — use the [HTTP API (fallback)](#http-api-fallback) for those.
 
 ## How to Use
 
@@ -89,29 +56,33 @@ Response: `{ skills, blueprints, skillsets, totalDownloads }`.
 
 1. Search the registry for relevant skills:
    ```bash
-   curl "https://openskillmd.com/api/skills?search=testing"
+   osm search testing
    ```
-2. Read the full skill content:
+2. Inspect the best match:
    ```bash
-   curl "https://openskillmd.com/api/skills/webapp-testing"
+   osm info webapp-testing
    ```
-3. Apply the skill's instructions to the current task.
+3. Install it (lands in your agent's skill directory automatically):
+   ```bash
+   osm add <owner>/<repo>
+   ```
+4. Apply the skill's instructions to the current task.
 
 ### When the agent needs a bundle of skills for a domain
 
-1. List available skill-sets:
+1. List available skill-sets (HTTP fallback — see below):
    ```bash
-   curl "https://openskillmd.com/api/skillsets"
+   curl "https://openskill.md/api/skillsets"
    ```
-2. Pick the relevant set (e.g. `@frontend`) and load each skill's content.
+2. Pick the relevant set (e.g. `@frontend`) and `osm add` each skill it lists.
 
 ### When the agent needs structured output
 
 1. Search blueprints for the output type:
    ```bash
-   curl "https://openskillmd.com/api/blueprints?search=report"
+   osm search report
    ```
-2. Read the blueprint spec and follow its structure for the output.
+2. Read the blueprint spec with `osm info <slug>` and follow its structure for the output.
 
 ## Presenting Results
 
@@ -127,7 +98,7 @@ For each recommended skill, surface:
 
 - **Score** — the registry quality score (higher is better)
 - **Install count** — how many agents have used it
-- **Verified author** — whether `ownerVerified` is `true`; mention this as a trust signal
+- **Verified author** — whether the author is verified; mention this as a trust signal
 
 Example format:
 ```
@@ -174,7 +145,7 @@ When a search doesn't return a perfect match, work through these tiers before te
 ### Tier 1 — Search skills directly
 
 ```bash
-curl "https://openskillmd.com/api/skills?search={query}&limit=5"
+osm search <query>
 ```
 
 If results come back with relevant matches, present them using the guidelines above. If no results or results are clearly irrelevant, move to Tier 2.
@@ -182,7 +153,7 @@ If results come back with relevant matches, present them using the guidelines ab
 ### Tier 2 — Check skill-sets for the domain
 
 ```bash
-curl "https://openskillmd.com/api/skillsets"
+curl "https://openskill.md/api/skillsets"
 ```
 
 Scan the skill-set list for a set that covers the user's domain. A skill-set may contain a relevant skill even if the direct search missed it because the search term didn't match the skill's name or description exactly. If a matching set is found, suggest it. If not, move to Tier 3.
@@ -190,10 +161,10 @@ Scan the skill-set list for a set that covers the user's domain. A skill-set may
 ### Tier 3 — Search blueprints for structured output
 
 ```bash
-curl "https://openskillmd.com/api/blueprints?search={query}&limit=5"
+osm search <query>
 ```
 
-Even when no skill exists for a task, a blueprint might provide the structured output format the user needs. If a relevant blueprint is found, recommend it and explain how its structured spec can guide the work.
+`osm search` returns blueprints alongside skills. Even when no skill exists for a task, a blueprint might provide the structured output format the user needs. If a relevant blueprint is found, recommend it and explain how its structured spec can guide the work.
 
 ### Tier 4 — Offer to help directly
 
@@ -202,6 +173,75 @@ Only after exhausting all three layers above, tell the user:
 > I couldn't find a skill, skill-set, or blueprint for that in the OpenSkill registry. I can still help you with this directly — want me to proceed with my built-in knowledge?
 
 Never jump straight to "not found." Always work through the tiers first.
+
+## HTTP API (fallback)
+
+When Node/`npm` isn't available — or you need raw JSON, skill-sets, or registry stats — hit the HTTP API directly.
+
+Base URL: `https://openskill.md`
+
+### Search Skills
+
+```bash
+curl "https://openskill.md/api/skills?search=react&limit=10"
+```
+
+Response: Array of skill objects with `name`, `slug`, `description`, `author`, `installCount`, `subcategory`, `ownerVerified`, `ownerAvatarUrl`.
+
+### Get Skill Detail
+
+```bash
+curl "https://openskill.md/api/skills/{slug}"
+```
+
+Response: Full skill object including `content` (the SKILL.md body), `sourceUrl`, `license`, `githubOwner`, `githubRepo`.
+
+### List Skill-Sets
+
+```bash
+curl "https://openskill.md/api/skillsets"
+```
+
+Response: Array of skill-set objects. Each has `name`, `slug`, `description`, `icon`, and a `skills` array of included skill summaries.
+
+Available skill-sets:
+- `@frontend` — React, Vue, CSS, design systems
+- `@backend` — APIs, databases, server patterns
+- `@fullstack` — End-to-end web development
+- `@mobile` — React Native, Expo, mobile UX
+- `@devops` — CI/CD, Docker, infrastructure
+- `@ai-ml` — Machine learning, LLMs, embeddings
+- `@security` — Auth, encryption, vulnerability scanning
+- `@design` — UI/UX, branding, accessibility
+- `@media` — Video, audio, image processing
+- `@productivity` — Automation, workflows, documentation
+
+### Search / Get Blueprints
+
+```bash
+curl "https://openskill.md/api/blueprints?search=invoice&limit=10"
+curl "https://openskill.md/api/blueprints/{slug}"
+```
+
+Response: Blueprint objects with `name`, `slug`, `description`, `category`, `difficulty`, and (on detail) `content` (the structured output spec).
+
+### Registry Stats
+
+```bash
+curl "https://openskill.md/api/stats"
+```
+
+Response: `{ skills, blueprints, skillsets, totalDownloads }`.
+
+### Manual install (no CLI)
+
+Download a skill's `SKILL.md` straight into your agent's skill directory so it stays discoverable:
+
+```bash
+mkdir -p .claude/skills/<slug>
+curl -sL "https://openskill.md/api/skills/<slug>" | jq -r '.content' \
+  > .claude/skills/<slug>/SKILL.md
+```
 
 ## Skill File Format
 
@@ -221,10 +261,10 @@ how to perform this specific task.
 
 ## Quick Start
 
-One command to discover everything:
-
 ```bash
-curl "https://openskillmd.com/api/stats"
+npm i -g openskillmd          # one-time CLI install
+osm search <what you need>    # discover skills + blueprints
+osm add <owner>/<repo>        # install — auto-placed where your agent looks
 ```
 
-Browse the full registry: [https://openskillmd.com](https://openskillmd.com)
+Browse the full registry: [https://openskill.md](https://openskill.md)
