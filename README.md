@@ -1,6 +1,6 @@
 # OpenSkill Router
 
-The skill router for AI agents. One install gives your agent access to the entire [OpenSkill](https://openskill.md) registry — skills, skill-sets, and blueprints.
+The skill router for AI agents. One install gives your agent access to the entire [OpenSkill](https://openskill.md) registry — skills, collections, and blueprints.
 
 ## Install
 
@@ -40,14 +40,14 @@ Once installed, your AI agent discovers capabilities through the `osm` CLI:
 - **Install (auto-placed for your agents)** — `osm add <owner>/<repo>`
 - **MCP servers** — `osm mcp info <slug>` · `osm mcp setup`
 
-Skill-sets (19 domain bundles like `@frontend`, `@backend`, `@ai-ml`) and registry
-stats are available over the [HTTP API](https://openskill.md) as a fallback when the
-CLI isn't an option.
+Collections (curated bundles — domain buckets like `frontend`, `backend`, `ai-ml`,
+plus hand-picked sets like `the-anthropic-power-pack`) and registry stats are available
+over the [HTTP API](https://openskill.md) as a fallback when the CLI isn't an option.
 
 ## Registry
 
 - **3,300+ skills** from 80+ official publishers (Microsoft, Anthropic, Vercel, Supabase, Stripe, and more)
-- **19 skill-sets** — domain bundles like `@frontend`, `@backend`, `@devops`, `@ai-ml`
+- **120+ collections** — domain bundles (`frontend`, `backend`, `devops`, `ai-ml`) and curated sets (`the-anthropic-power-pack`, `the-mcp-builders-workshop`)
 - **130+ blueprints** — self-correcting output specs (invoices, resumes, pitch decks, API docs)
 
 ## Links
