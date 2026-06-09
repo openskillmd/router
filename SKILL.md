@@ -89,7 +89,12 @@ command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#ht
    ```bash
    osm add <githubOwner>/<githubRepo>
    ```
-   (If a skill's `githubRepo` is `null`, resolve it with `osm info <slug>` first.)
+   - If several skills in the collection share the same `<githubOwner>/<githubRepo>`
+     (a multi-skill repo), don't add the bare repo — it's ambiguous. Install the
+     specific skill with `osm add <githubOwner>/<githubRepo>@<skill>`, getting
+     `<skill>` from `osm info <slug>`.
+   - If a skill's `githubRepo` is `null`, resolve the coordinate with
+     `osm info <slug>` first.
 
 ### When the agent needs structured output
 
@@ -218,6 +223,12 @@ curl "https://openskill.md/api/collections"
 ```
 
 Response: `{ data, pagination }`. Each item in `data` has `name`, `slug`, `description`, `icon`, and item counts (`skillCount`, `blueprintCount`, `mcpServerCount`). Use the `slug` (e.g. `frontend`, `the-anthropic-power-pack`) — not the display `name` — for the detail call below.
+
+**The list is paginated** — `pagination` is `{ page, limit, total, totalPages }`, and a single call returns only the first page (there are 100+ collections). To get the complete set, pass `?limit=` / `?page=` and keep fetching until `page === totalPages`:
+
+```bash
+curl "https://openskill.md/api/collections?page=1&limit=100"
+```
 
 ```bash
 curl "https://openskill.md/api/collections/{slug}"
