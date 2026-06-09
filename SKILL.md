@@ -1,11 +1,11 @@
 ---
 name: openskill-router
-description: Discovers and installs AI agent skills, skill-sets, and blueprints from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, or structured output templates. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
+description: Discovers and installs AI agent skills, collections, and blueprints from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, or structured output templates. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
 ---
 
 # OpenSkill Router
 
-The skill router for AI agents. Discover, search, and install curated skills, skill-sets, and blueprints from the OpenSkill registry — using the `osm` CLI.
+The skill router for AI agents. Discover, search, and install curated skills, collections, and blueprints from the OpenSkill registry — using the `osm` CLI.
 
 **"I know Kung Fu."**
 
@@ -14,7 +14,7 @@ The skill router for AI agents. Discover, search, and install curated skills, sk
 OpenSkill.md is the App Store for AI agent capabilities. It has three layers:
 
 1. **Skills** — Curated domain expertise files (`SKILL.md`) that teach agents how to perform specific tasks
-2. **Skill-Sets** — Bundles of related skills grouped by domain (e.g. `@frontend`, `@backend`, `@ai-ml`)
+2. **Collections** — Curated bundles of related skills, blueprints, and MCP servers. Some are domain buckets (`frontend`, `backend`, `ai-ml`); others are hand-picked sets (`the-anthropic-power-pack`, `the-mcp-builders-workshop`)
 3. **Blueprints** — Self-correcting output specifications that guarantee structured results
 
 This router skill teaches your agent how to discover and use all three through the `osm` CLI.
@@ -45,10 +45,16 @@ If `npm`/Node isn't available in this environment, use the **[HTTP API (fallback
 | Full details for a skill or blueprint | `osm info <slug>` |
 | Install a skill (auto-placed for your agents) | `osm add <owner>/<repo>` — add `--json` for a machine-readable result |
 | Install a specific skill from a multi-skill repo | `osm add <owner>/<repo>@<skill>` |
+| Browse collections interactively | `osm browse` |
 | MCP server details / config | `osm mcp info <slug>` · `osm mcp setup` |
 
-For **skill-sets** (domain bundles) and **registry stats** there's no non-interactive `osm`
-command yet — use the [HTTP API (fallback)](#http-api-fallback) for those.
+> `osm add` takes a source coordinate (`<owner>/<repo>` or `<owner>/<repo>@<skill>`),
+> **not** a catalog slug. When you only have a skill's catalog `slug` (e.g. from a
+> collection listing), resolve it first with `osm info <slug>` — it prints the
+> `github.com/<owner>/<repo>` repository — then `osm add <owner>/<repo>`.
+
+For **collections** and **registry stats** there's no non-interactive `osm`
+command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#http-api-fallback) for a scriptable list.
 
 ## How to Use
 
@@ -58,7 +64,7 @@ command yet — use the [HTTP API (fallback)](#http-api-fallback) for those.
    ```bash
    osm search testing
    ```
-2. Inspect the best match:
+2. Inspect the best match (also reveals its `<owner>/<repo>` source):
    ```bash
    osm info webapp-testing
    ```
@@ -70,11 +76,25 @@ command yet — use the [HTTP API (fallback)](#http-api-fallback) for those.
 
 ### When the agent needs a bundle of skills for a domain
 
-1. List available skill-sets (HTTP fallback — see below):
+1. List available collections (HTTP fallback — see below):
    ```bash
-   curl "https://openskill.md/api/skillsets"
+   curl "https://openskill.md/api/collections"
    ```
-2. Pick the relevant set (e.g. `@frontend`) and `osm add` each skill it lists.
+2. Open the relevant collection by its slug to see what it bundles:
+   ```bash
+   curl "https://openskill.md/api/collections/frontend"
+   ```
+   Each entry in the `skills` array carries `slug`, `githubOwner`, and `githubRepo`.
+3. Install each skill with its source coordinate:
+   ```bash
+   osm add <githubOwner>/<githubRepo>
+   ```
+   - If several skills in the collection share the same `<githubOwner>/<githubRepo>`
+     (a multi-skill repo), don't add the bare repo — it's ambiguous. Install the
+     specific skill with `osm add <githubOwner>/<githubRepo>@<skill>`, getting
+     `<skill>` from `osm info <slug>`.
+   - If a skill's `githubRepo` is `null`, resolve the coordinate with
+     `osm info <slug>` first.
 
 ### When the agent needs structured output
 
@@ -106,11 +126,11 @@ webapp-testing (score: 92 · 1.4k installs · ✓ verified)
   End-to-end testing with Playwright — covers setup, selectors, and CI.
 ```
 
-### Suggest skill-sets for broad needs
+### Suggest collections for broad needs
 
-When a user's request spans an entire domain rather than a single task (e.g. "help me build a frontend"), recommend the relevant skill-set instead of listing individual skills. Mention what the set includes so the user understands the breadth:
+When a user's request spans an entire domain rather than a single task (e.g. "help me build a frontend"), recommend the relevant collection instead of listing individual skills. Mention what the collection includes so the user understands the breadth:
 
-> Your project covers React components, styling, and accessibility — the `@frontend` skill-set bundles all of these together.
+> Your project covers React components, styling, and accessibility — the `frontend` collection bundles skills for all of these.
 
 ### Comparing Multiple Results
 
@@ -150,13 +170,13 @@ osm search <query>
 
 If results come back with relevant matches, present them using the guidelines above. If no results or results are clearly irrelevant, move to Tier 2.
 
-### Tier 2 — Check skill-sets for the domain
+### Tier 2 — Check collections for the domain
 
 ```bash
-curl "https://openskill.md/api/skillsets"
+curl "https://openskill.md/api/collections"
 ```
 
-Scan the skill-set list for a set that covers the user's domain. A skill-set may contain a relevant skill even if the direct search missed it because the search term didn't match the skill's name or description exactly. If a matching set is found, suggest it. If not, move to Tier 3.
+Scan the collection list for one that covers the user's domain. A collection may contain a relevant skill even if the direct search missed it because the search term didn't match the skill's name or description exactly. If a matching collection is found, open it (`/api/collections/<slug>`) and suggest its skills. If not, move to Tier 3.
 
 ### Tier 3 — Search blueprints for structured output
 
@@ -170,13 +190,13 @@ osm search <query>
 
 Only after exhausting all three layers above, tell the user:
 
-> I couldn't find a skill, skill-set, or blueprint for that in the OpenSkill registry. I can still help you with this directly — want me to proceed with my built-in knowledge?
+> I couldn't find a skill, collection, or blueprint for that in the OpenSkill registry. I can still help you with this directly — want me to proceed with my built-in knowledge?
 
 Never jump straight to "not found." Always work through the tiers first.
 
 ## HTTP API (fallback)
 
-When Node/`npm` isn't available — or you need raw JSON, skill-sets, or registry stats — hit the HTTP API directly.
+When Node/`npm` isn't available — or you need raw JSON, collections, or registry stats — hit the HTTP API directly.
 
 Base URL: `https://openskill.md`
 
@@ -186,7 +206,7 @@ Base URL: `https://openskill.md`
 curl "https://openskill.md/api/skills?search=react&limit=10"
 ```
 
-Response: Array of skill objects with `name`, `slug`, `description`, `author`, `installCount`, `subcategory`, `ownerVerified`, `ownerAvatarUrl`.
+Response: `{ data, pagination }`. Each item in `data` has `name`, `slug`, `description`, `author`, `installCount`, `subcategory`, `ownerVerified`, `ownerAvatarUrl`.
 
 ### Get Skill Detail
 
@@ -194,27 +214,29 @@ Response: Array of skill objects with `name`, `slug`, `description`, `author`, `
 curl "https://openskill.md/api/skills/{slug}"
 ```
 
-Response: Full skill object including `content` (the SKILL.md body), `sourceUrl`, `license`, `githubOwner`, `githubRepo`.
+Response: Full skill object including `content` (the SKILL.md body), `sourceUrl`, `license`, `githubOwner`, `githubRepo`. Use `githubOwner`/`githubRepo` to build the `osm add <owner>/<repo>` command.
 
-### List Skill-Sets
+### List Collections
 
 ```bash
-curl "https://openskill.md/api/skillsets"
+curl "https://openskill.md/api/collections"
 ```
 
-Response: Array of skill-set objects. Each has `name`, `slug`, `description`, `icon`, and a `skills` array of included skill summaries.
+Response: `{ data, pagination }`. Each item in `data` has `name`, `slug`, `description`, `icon`, and item counts (`skillCount`, `blueprintCount`, `mcpServerCount`). Use the `slug` (e.g. `frontend`, `the-anthropic-power-pack`) — not the display `name` — for the detail call below.
 
-Available skill-sets:
-- `@frontend` — React, Vue, CSS, design systems
-- `@backend` — APIs, databases, server patterns
-- `@fullstack` — End-to-end web development
-- `@mobile` — React Native, Expo, mobile UX
-- `@devops` — CI/CD, Docker, infrastructure
-- `@ai-ml` — Machine learning, LLMs, embeddings
-- `@security` — Auth, encryption, vulnerability scanning
-- `@design` — UI/UX, branding, accessibility
-- `@media` — Video, audio, image processing
-- `@productivity` — Automation, workflows, documentation
+**The list is paginated** — `pagination` is `{ page, limit, total, totalPages }`, and a single call returns only the first page (there are 100+ collections). To get the complete set, pass `?limit=` / `?page=` and keep fetching until `page === totalPages`:
+
+```bash
+curl "https://openskill.md/api/collections?page=1&limit=100"
+```
+
+```bash
+curl "https://openskill.md/api/collections/{slug}"
+```
+
+Response: One collection with `skills`, `blueprints`, and `mcpServers` arrays. Each skill carries `slug`, `githubOwner`, and `githubRepo` — the coordinates needed for `osm add <githubOwner>/<githubRepo>`.
+
+Example collection slugs: `frontend`, `backend`, `fullstack`, `ai-ml`, `devops`, `design`, `the-anthropic-power-pack`, `the-mcp-builders-workshop`, `build-with-nextjs`. Run the list endpoint for the current, complete set.
 
 ### Search / Get Blueprints
 
@@ -231,7 +253,7 @@ Response: Blueprint objects with `name`, `slug`, `description`, `category`, `dif
 curl "https://openskill.md/api/stats"
 ```
 
-Response: `{ skills, blueprints, skillsets, totalDownloads }`.
+Response: `{ skills, blueprints, collections, mcpServers, totalDownloads }`.
 
 ### MCP Servers
 
