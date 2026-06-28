@@ -1,6 +1,6 @@
 ---
 name: openskill-router
-description: Discovers and installs AI agent skills, collections, and blueprints from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, or structured output templates. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
+description: Discovers and installs AI agent skills, collections, blueprints, and plugins from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, structured output templates, or runtime plugin bundles. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
 ---
 
 # OpenSkill Router
@@ -11,13 +11,14 @@ The skill router for AI agents. Discover, search, and install curated skills, co
 
 ## Overview
 
-OpenSkill.md is the App Store for AI agent capabilities. It has three layers:
+OpenSkill.md is the App Store for AI agent capabilities. It has four layers:
 
 1. **Skills** — Curated domain expertise files (`SKILL.md`) that teach agents how to perform specific tasks
 2. **Collections** — Curated bundles of related skills, blueprints, and MCP servers. Some are domain buckets (`frontend`, `backend`, `ai-ml`); others are hand-picked sets (`the-anthropic-power-pack`, `the-mcp-builders-workshop`)
 3. **Blueprints** — Self-correcting output specifications that guarantee structured results
+4. **Plugins** — Plugin bundles (commands, agents, skills, hooks, MCP servers) that a runtime installs in one step from a marketplace
 
-This router skill teaches your agent how to discover and use all three through the `osm` CLI.
+This router skill teaches your agent how to discover and use all four through the `osm` CLI.
 
 ## Setup — install the osm CLI
 
@@ -45,6 +46,7 @@ If `npm`/Node isn't available in this environment, use the **[HTTP API (fallback
 | Full details for a skill or blueprint | `osm info <slug>` |
 | Install a skill (auto-placed for your agents) | `osm add <slug>` or `osm add <owner>/<repo>` — add `--json` for a machine-readable result |
 | Install a specific skill from a multi-skill repo | `osm add <owner>/<repo>@<skill>` |
+| Install a plugin (runs the native marketplace→install two-step under the hood) | `osm add <slug>` — project-scoped by default, `-g` for global |
 | Browse collections interactively | `osm browse` |
 | MCP server details / config | `osm mcp info <slug>` · `osm mcp setup` |
 
@@ -107,6 +109,26 @@ command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#ht
    osm search report
    ```
 2. Read the blueprint spec with `osm info <slug>` and follow its structure for the output.
+
+### When the agent needs a plugin
+
+Plugins bundle commands, agents, skills, hooks, and MCP servers that a runtime
+(Claude Code, Codex) installs in one step from a marketplace.
+
+1. Search the registry for a relevant plugin:
+   ```bash
+   osm search <query>
+   ```
+2. Inspect the best match — its runtimes, marketplaces, and the install string:
+   ```bash
+   osm info <slug>
+   ```
+3. Install it (`osm add` runs the native marketplace→install two-step for you;
+   project-scoped by default, add `-g` for a global install):
+   ```bash
+   osm add <slug>
+   ```
+4. Restart / reload the runtime so it picks up the plugin's commands and agents.
 
 ## Presenting Results
 
@@ -257,7 +279,7 @@ Response: Blueprint objects with `name`, `slug`, `description`, `category`, `dif
 curl "https://openskill.md/api/stats"
 ```
 
-Response: `{ skills, blueprints, collections, mcpServers, totalDownloads }`.
+Response: `{ skills, blueprints, collections, mcpServers, plugins, totalDownloads }`.
 
 ### MCP Servers
 
@@ -269,6 +291,19 @@ curl "https://openskill.md/api/mcp-servers/{slug}"                     # server 
 ```
 
 To connect an MCP client directly, point it at the SSE endpoint `https://openskill.md/api/mcp/sse`.
+
+### Plugins
+
+The `osm search` / `osm info` / `osm add <slug>` equivalents over HTTP:
+
+```bash
+curl "https://openskill.md/api/plugins?search=postgres&limit=10"   # list & search
+curl "https://openskill.md/api/plugins/{slug}"                     # plugin detail
+```
+
+The detail response returns `installCommand` (the native marketplace→install
+two-step string the runtime runs), `runtimes` (which agents support it, e.g.
+`claude-code`, `codex`), and `marketplaces` (where the bundle is published).
 
 ### Manual install (no CLI)
 
