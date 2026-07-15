@@ -290,7 +290,23 @@ curl "https://openskill.md/api/mcp-servers?search=postgres&limit=10"   # list & 
 curl "https://openskill.md/api/mcp-servers/{slug}"                     # server detail
 ```
 
-To connect an MCP client directly, point it at the SSE endpoint `https://openskill.md/api/mcp/sse`.
+To connect an MCP client directly, point it at `https://openskill.md/api/mcp` and set
+`"type": "http"` — that key is what selects Streamable HTTP (MCP spec rev 2025-03-26).
+Omit it and most clients fall back to the deprecated SSE transport.
+
+```json
+{
+  "mcpServers": {
+    "openskill": {
+      "type": "http",
+      "url": "https://openskill.md/api/mcp"
+    }
+  }
+}
+```
+
+The older SSE endpoint `https://openskill.md/api/mcp/sse` still responds, so existing
+configs keep working — but new ones should use the above.
 
 ### Plugins
 
