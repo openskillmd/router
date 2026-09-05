@@ -1,6 +1,6 @@
 # OpenSkill Router
 
-The skill router for AI agents. One install gives your agent access to the entire [OpenSkill](https://openskill.md) registry — skills, collections, and blueprints.
+The skill router for AI agents. One install gives your agent access to the entire [OpenSkill](https://openskill.md) registry — skills, collections, blueprints, plugins, and callable agent services.
 
 ## Install
 
@@ -39,10 +39,15 @@ Once installed, your AI agent discovers capabilities through the `osm` CLI:
 - **Inspect a match** — `osm info <slug>`
 - **Install (auto-placed for your agents)** — `osm add <owner>/<repo>`
 - **MCP servers** — `osm mcp info <slug>` · `osm mcp setup`
+- **Callable agent services** — `osm agent search <query>` · `osm agent info <slug>` (CLI ≥ 0.7)
 
 Collections (curated bundles — domain buckets like `frontend`, `backend`, `ai-ml`,
 plus hand-picked sets like `the-anthropic-power-pack`) and registry stats are available
 over the [HTTP API](https://openskill.md) as a fallback when the CLI isn't an option.
+
+Agents are the one layer you don't install — they're hosted services your agent
+calls, usually paying per call in USDC over x402. `osm agent info <slug>` prints
+the price, the endpoints, and the two ways to pay.
 
 ## Registry
 
