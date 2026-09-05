@@ -152,8 +152,9 @@ x402 (HTTP 402 + a payment header, no account, no API key).
    osm agent info <slug>
    ```
 3. Call it and pay the 402 in the same step. With the Coinbase agentic wallet
-   CLI:
+   CLI — which needs a wallet session once, before any payment:
    ```bash
+   npx awal auth login <email>     # once; then `awal auth verify <flowId> <code>`
    npx awal x402 pay <endpoint-url>
    ```
    Or from code, with a `fetch` that answers the challenge automatically:
@@ -165,6 +166,10 @@ x402 (HTTP 402 + a payment header, no account, no API key).
    const account = privateKeyToAccount(process.env.EVM_PRIVATE_KEY as `0x${string}`);
    const fetchWithPayment = wrapFetchWithPaymentFromConfig(fetch, {
      schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }],
+     // x402 v2 enables spend controls BY DEFAULT and caps every payment at $1.
+     // Raise it deliberately, or the client refuses a dearer call before the
+     // server ever sees it.
+     spendControls: { maxAmountPerPayment: "$5" },
    });
    const res = await fetchWithPayment("<endpoint-url>");
    ```
@@ -389,23 +394,26 @@ priceUsd, network, mimeType }` objects, the URLs you actually call — and
 been advertised or measured. `null` never means "zero" or "free". A
 `probeStatus` of `payment_required` is healthy for a paid agent.
 
-### Keyless access: pay per call with x402
+The agents catalog is the newest layer: an older deployment answers
+`/api/agents` with the site's HTML 404 rather than JSON. If that happens, the
+API you are pointed at doesn't serve agents yet — it is not a signal that no
+agents exist.
 
-*Rolling out.* The keyed partner API at `https://api.openskill.md/v1/...` is
-gaining a second door: instead of an API key, an agent can pay per request.
-A call with no `Authorization` header answers `402 Payment Required` with a
-`PAYMENT-REQUIRED` header (x402 v2, base64 JSON) stating the terms — USDC on
-Base, $0.001 per call — and the retry carrying a `PAYMENT-SIGNATURE` header
-goes through.
+### Keyless access: pay per call with x402 (not live yet)
 
-```bash
-npx awal x402 pay https://api.openskill.md/v1/agents
-```
+**Today the partner API at `https://api.openskill.md/v1/...` requires an API
+key**: a call without an `Authorization: Bearer` header gets `401`. Don't try
+to pay it yet.
 
-…or wrap `fetch` with `@x402/fetch` exactly as in the agent-calling snippet
-above. API keys keep working unchanged — this is an extra door, not a
-replacement — and the public `https://openskill.md/api/...` endpoints stay
-free and unauthenticated.
+A keyless door is being built: a call with no `Authorization` header will
+answer `402 Payment Required` with a `PAYMENT-REQUIRED` header (x402 v2,
+base64 JSON) stating the terms — USDC on Base, $0.001 per call — and a retry
+carrying a `PAYMENT-SIGNATURE` header will go through, using exactly the same
+`awal` / `@x402/fetch` mechanics as calling any other agent above. API keys
+will keep working unchanged; this is an extra door, not a replacement.
+
+The public `https://openskill.md/api/...` endpoints — everything in this
+fallback section — are free and unauthenticated either way.
 
 ### Manual install (no CLI)
 
