@@ -395,9 +395,9 @@ been advertised or measured. `null` never means "zero" or "free". A
 `probeStatus` of `payment_required` is healthy for a paid agent.
 
 The agents catalog is the newest layer: an older deployment answers
-`/api/agents` with the site's HTML 404 rather than JSON. If that happens, the
-API you are pointed at doesn't serve agents yet — it is not a signal that no
-agents exist.
+`/api/agents` with an HTML 404 rather than JSON. If that happens, the API you
+are pointed at doesn't serve agents yet — it is not a signal that no agents
+exist.
 
 ### Keyless access: pay per call with x402 (not live yet)
 
