@@ -1,24 +1,25 @@
 ---
 name: openskill-router
-description: Discovers and installs AI agent skills, collections, blueprints, and plugins from the OpenSkill registry. Use when an agent needs new capabilities, domain expertise, structured output templates, or runtime plugin bundles. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
+description: Discovers and installs AI agent skills, collections, blueprints, and plugins from the OpenSkill registry — and finds hosted, callable agent services to pay and call. Use when an agent needs new capabilities, domain expertise, structured output templates, runtime plugin bundles, or another agent to do the work. Drives discovery through the osm CLI (install once with `npm i -g openskillmd`); falls back to the HTTP API when Node isn't available.
 ---
 
 # OpenSkill Router
 
-The skill router for AI agents. Discover, search, and install curated skills, collections, and blueprints from the OpenSkill registry — using the `osm` CLI.
+The skill router for AI agents. Discover, search, and install curated skills, collections, and blueprints — and discover callable agent services — from the OpenSkill registry, using the `osm` CLI.
 
 **"I know Kung Fu."**
 
 ## Overview
 
-OpenSkill.md is the App Store for AI agent capabilities. It has four layers:
+OpenSkill.md is the App Store for AI agent capabilities. It has five layers:
 
 1. **Skills** — Curated domain expertise files (`SKILL.md`) that teach agents how to perform specific tasks
 2. **Collections** — Curated bundles of related skills, blueprints, and MCP servers. Some are domain buckets (`frontend`, `backend`, `ai-ml`); others are hand-picked sets (`the-anthropic-power-pack`, `the-mcp-builders-workshop`)
 3. **Blueprints** — Self-correcting output specifications that guarantee structured results
 4. **Plugins** — Plugin bundles (commands, agents, skills, hooks, MCP servers) that a runtime installs in one step from a marketplace
+5. **Agents** — Hosted, callable (often x402-paid) agent services: A2A cards, MCP endpoints, x402 Bazaar resources. You don't install these — you call them
 
-This router skill teaches your agent how to discover and use all four through the `osm` CLI.
+This router skill teaches your agent how to discover and use all five through the `osm` CLI.
 
 ## Setup — install the osm CLI
 
@@ -49,6 +50,8 @@ If `npm`/Node isn't available in this environment, use the **[HTTP API (fallback
 | Install a plugin (runs the native marketplace→install two-step under the hood) | `osm add <slug>` — project-scoped by default, `-g` for global |
 | Browse collections interactively | `osm browse` |
 | MCP server details / config | `osm mcp info <slug>` · `osm mcp setup` |
+| Search callable agent services | `osm agent search <query>` |
+| Agent details — protocols, price per call, endpoints | `osm agent info <slug>` |
 
 > CLI ≥ 0.3 resolves catalog slugs automatically: `osm add <slug>` looks the slug
 > up in the registry and installs exactly that skill from its source repo (the
@@ -56,6 +59,9 @@ If `npm`/Node isn't available in this environment, use the **[HTTP API (fallback
 > only in the registry with no public source fail with an `osm info <slug>`
 > pointer. On CLI 0.2.x, resolve manually: `osm info <slug>` prints the
 > `github.com/<owner>/<repo>` repository, then `osm add <owner>/<repo>`.
+
+> `osm agent` needs CLI ≥ 0.7. On older CLIs use the
+> [HTTP API (fallback)](#http-api-fallback) — `/api/agents` returns the same data.
 
 For **collections** and **registry stats** there's no non-interactive `osm`
 command yet — use `osm browse` interactively, or the [HTTP API (fallback)](#http-api-fallback) for a scriptable list.
@@ -129,6 +135,46 @@ Plugins bundle commands, agents, skills, hooks, and MCP servers that a runtime
    osm add <slug>
    ```
 4. Restart / reload the runtime so it picks up the plugin's commands and agents.
+
+### When the agent needs another agent / a paid API
+
+Agents are the one layer you **don't install**. They are hosted services you
+call over HTTP, MCP, or A2A — and most of them charge per call in USDC over
+x402 (HTTP 402 + a payment header, no account, no API key).
+
+1. Search for a service that does the job:
+   ```bash
+   osm agent search "web search"
+   ```
+2. Read the detail — protocols, networks, price per call, recipient address,
+   and the callable endpoints:
+   ```bash
+   osm agent info <slug>
+   ```
+3. Call it and pay the 402 in the same step. With the Coinbase agentic wallet
+   CLI — which needs a wallet session once, before any payment:
+   ```bash
+   npx awal auth login <email>     # once; then `awal auth verify <flowId> <code>`
+   npx awal x402 pay <endpoint-url>
+   ```
+   Or from code, with a `fetch` that answers the challenge automatically:
+   ```typescript
+   import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
+   import { ExactEvmScheme } from "@x402/evm";
+   import { privateKeyToAccount } from "viem/accounts";
+
+   const account = privateKeyToAccount(process.env.EVM_PRIVATE_KEY as `0x${string}`);
+   const fetchWithPayment = wrapFetchWithPaymentFromConfig(fetch, {
+     schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }],
+     // x402 v2 enables spend controls BY DEFAULT and caps every payment at $1.
+     // Raise it deliberately, or the client refuses a dearer call before the
+     // server ever sees it.
+     spendControls: { maxAmountPerPayment: "$5" },
+   });
+   const res = await fetchWithPayment("<endpoint-url>");
+   ```
+4. Never `osm add` an agent — there is nothing to place on disk. `osm add` on
+   an agent slug says so and points you at `osm agent info <slug>`.
 
 ## Presenting Results
 
@@ -279,7 +325,7 @@ Response: Blueprint objects with `name`, `slug`, `description`, `category`, `dif
 curl "https://openskill.md/api/stats"
 ```
 
-Response: `{ skills, blueprints, collections, mcpServers, plugins, totalDownloads }`.
+Response: `{ skills, blueprints, collections, mcpServers, plugins, agents, totalDownloads }`.
 
 ### MCP Servers
 
@@ -320,6 +366,54 @@ curl "https://openskill.md/api/plugins/{slug}"                     # plugin deta
 The detail response returns `installCommand` (the native marketplace→install
 two-step string the runtime runs), `runtimes` (which agents support it, e.g.
 `claude-code`, `codex`), and `marketplaces` (where the bundle is published).
+
+### Agents
+
+The `osm agent search` / `osm agent info` equivalents over HTTP:
+
+```bash
+curl "https://openskill.md/api/agents?search=&protocol=&network=&maxPriceUsd="   # list & search
+curl "https://openskill.md/api/agents/{slug}"                                    # agent detail
+```
+
+`protocol` is one of `http` / `mcp` / `a2a`; `network` is a CAIP-2 chain id
+(e.g. `eip155:8453` for Base); `maxPriceUsd` caps the cheapest advertised call.
+
+Response: `{ data, pagination }`. Each item in `data` has `slug`, `name`,
+`displayName`, `description`, `category`, `url` (the service origin),
+`protocols`, `endpointCount`, `skills`, `payTo`, `x402Support`, `minPriceUsd`,
+`x402` (`{ accepts, payTo, minPriceUsd, maxPriceUsd, networks }`), `erc8004`,
+`l30dCalls`, `l30dUniquePayers`, `lastCalledAt`, `probeStatus`, `featured`,
+and `verified`.
+
+The detail response adds `endpoints` — up to 50 `{ url, method, description,
+priceUsd, network, mimeType }` objects, the URLs you actually call — and
+`agentCard`, the raw A2A card.
+
+`minPriceUsd`, `l30dCalls`, and `l30dUniquePayers` are `null` when nothing has
+been advertised or measured. `null` never means "zero" or "free". A
+`probeStatus` of `payment_required` is healthy for a paid agent.
+
+The agents catalog is the newest layer: an older deployment answers
+`/api/agents` with an HTML 404 rather than JSON. If that happens, the API you
+are pointed at doesn't serve agents yet — it is not a signal that no agents
+exist.
+
+### Keyless access: pay per call with x402 (not live yet)
+
+**Today the partner API at `https://api.openskill.md/v1/...` requires an API
+key**: a call without an `Authorization: Bearer` header gets `401`. Don't try
+to pay it yet.
+
+A keyless door is being built: a call with no `Authorization` header will
+answer `402 Payment Required` with a `PAYMENT-REQUIRED` header (x402 v2,
+base64 JSON) stating the terms — USDC on Base, $0.001 per call — and a retry
+carrying a `PAYMENT-SIGNATURE` header will go through, using exactly the same
+`awal` / `@x402/fetch` mechanics as calling any other agent above. API keys
+will keep working unchanged; this is an extra door, not a replacement.
+
+The public `https://openskill.md/api/...` endpoints — everything in this
+fallback section — are free and unauthenticated either way.
 
 ### Manual install (no CLI)
 
